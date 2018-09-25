@@ -21,7 +21,7 @@ def fromCSVToMetas = { path ->
     return [ "vcf": vals[0], "ref": vals[1], "refDB": vals[2] ]
   }
 }
-def resolveFile = { meta -> tuple(meta, file("${params.vcfs}/${meta.vcf}.vcf"), file("${params.refs}/${meta.ref}")}
+def resolveFile = { meta -> tuple(meta, file("${params.vcfs}/${meta.vcf}.vcf"), file("${params.refs}/${meta.ref}")) }
 
 vcfMetas = Channel.from(*fromCSVToMetas(params.mapping)).map(resolveFile)
 
