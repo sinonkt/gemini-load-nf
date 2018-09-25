@@ -1,6 +1,6 @@
 # gemini-load-nf
 <hr/>
-'''
+'''groovy
 // ******************** Start Params *********************
 params.rootDir = "/home/dev/Code"
 params.mapping = "${params.rootDir}/data/mapping.csv"
