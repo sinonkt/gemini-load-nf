@@ -1,7 +1,6 @@
 # gemini-load-nf
-<hr/>
-'''groovy
-// ******************** Start Params *********************
+Implicit value of params which synchronize to [docker-centos7-singularity-nextflow](https://hub.docker.com/r/sinonkt/docker-centos7-singularity-nextflow/~/dockerfile/)
+```groovy
 params.rootDir = "/home/dev/Code"
 params.mapping = "${params.rootDir}/data/mapping.csv"
 params.vcfs = "${params.rootDir}/data/vcfs"
@@ -12,5 +11,4 @@ params.annos = "${params.rootDir}/data/annos"
 
 params.annotateMemory = '4.2 GB'
 params.loadCpus = 1
-// ******************** End Params *********************
-'''
+```
