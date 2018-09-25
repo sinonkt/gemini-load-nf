@@ -21,33 +21,24 @@ def fromCSVToMetas = { path ->
     return [ "vcf": vals[0], "ref": vals[1], "refDB": vals[2] ]
   }
 }
+def resolveFile = { meta -> tuple(meta, file("${params.vcfs}/${meta.vcf}.vcf"), file("${params.refs}/${meta.ref}")}
 
-vcfMetas = Channel.from(*fromCSVToMetas(params.mapping))
-vcfs = Channel.fromPath("${params.vcfs}/*.vcf")
-Channel.fromPath("${params.refs}/*").into { references; debugRef }
-
-
-println vcfMetas
-debugRef.subscribe{
-    println it
-}
+vcfMetas = Channel.from(*fromCSVToMetas(params.mapping)).map(resolveFile)
 
 process decomposeNormalize {
 
     input:
-    val meta from vcfMetas
-    file "${meta.vcf}.vcf" from vcfs
-    file "${meta.ref}" from references
+    set meta, 'file.vcf', 'ref.fasta' from vcfMetas
 
     output:
     set meta, "decomposed.normalized.vcf" into decompoedNormalizedVCFs
 
     shell: 
     '''
-    zless !{meta.vcf}.vcf |
+    zless file.vcf |
         sed 's/ID=AD,Number=./ID=AD,Number=R/' | 
         vt decompose -s - |
-        vt normalize -r !{meta.ref} - > decomposed.normalized.vcf
+        vt normalize -r ref.fasta - > decomposed.normalized.vcf
     '''
 }
 
@@ -59,7 +50,8 @@ process annotation {
     set meta, "decomposed.normalized.vcf" from decompoedNormalizedVCFs
 
     output:
-    set meta, "annotated.vcf.gz", "snpEff_genes.txt", "snpEff_summary.html"  into annotatedVCFs
+    set meta, "annotated.vcf.gz" into annotatedVCFs
+    set "snpEff_genes.txt", "snpEff_summary.html" into snpEffLogs
 
     shell:
     '''
@@ -77,7 +69,7 @@ process geminiLoad {
     containerOptions = "-B ${params.annos}:/gemini_data"
 
     input: 
-    set meta, "annotated.vcf.gz", "snpEff_genes.txt", "snpEff_summary.html"  from annotatedVCFs
+    set meta, "annotated.vcf.gz" from annotatedVCFs
 
     output: 
     set meta, "${meta.vcf}.db" into dbs
