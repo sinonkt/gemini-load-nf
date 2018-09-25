@@ -24,7 +24,7 @@ def fromCSVToMetas = { path ->
 
 vcfMetas = Channel.from(*fromCSVToMetas(params.mapping))
 vcfs = Channel.fromPath("${params.vcfs}/*.vcf")
-references = Channel.fromPath("${params.refs}/*.{fa,fasta,fa.gz}")
+references = Channel.fromPath("${params.refs}/*")
 
 
 process decomposeNormalize {
