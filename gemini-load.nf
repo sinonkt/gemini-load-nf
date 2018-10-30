@@ -62,8 +62,6 @@ process annotation {
 
 process geminiLoad {
 
-    cpus params.loadCpus
-
     publishDir params.dbs, mode: 'copy'
 
     containerOptions = "-B ${params.annos}:/gemini_data"
