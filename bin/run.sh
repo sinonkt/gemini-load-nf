@@ -1,3 +1,4 @@
+PROFILE=local
 ROOT_DIR=/home/dev/Code
 datetime=$(date -d "today" +"%Y%m%d%H%M")
 NX_CONFIG=nextflow.config
@@ -9,6 +10,7 @@ mkdir -p $LOG_DIR
 nextflow -log $LOG_DIR/.nextflow.log \
   -C $NX_CONFIG \
   run $1 \
+  -profile $PROFILE \
   -w $WORK_DIR \
   -resume \
   -with-report ${LOG_DIR}/report.html \
