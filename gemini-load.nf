@@ -14,15 +14,14 @@ params.annotateCpus = 1
 params.loadCpus = 1
 // ******************** End Params *********************
 
-def toPrefixTuple = { file -> tuple(file.name.take(file.name.lastIndexOf('.')), file.toRealPath()) }
-def flatGroupTuple = { it -> tuple(it[0], *it[1].sort()) }
 def fromCSVToMetas = { path -> 
   file(path).text.split("\\r?\\n").collect { 
     def vals = it.split(",")
     return [ "vcf": vals[0], "ref": vals[1], "refDB": vals[2] ]
   }
 }
-def resolveFile = { meta -> tuple(meta, file("${params.vcfs}/${meta.vcf}.vcf.gz"), file("${params.refs}/${meta.ref}")) }
+
+def resolveFile = { meta -> tuple(meta, file("${params.vcfs}/${meta.vcf}"), file("${params.refs}/${meta.ref}")) }
 
 vcfMetas = Channel.from(*fromCSVToMetas(params.mapping)).map(resolveFile)
 
