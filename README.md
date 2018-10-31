@@ -9,6 +9,7 @@ params.refs = "${params.rootDir}/data/references"
 params.dbs = "${params.rootDir}/data/dbs"
 params.annos = "${params.rootDir}/data/annos"
 
-params.annotateMemory = '4.2 GB'
+params.annotateMemoryGB = 4
+params.annotateCpus = 1
 params.loadCpus = 1
 ```
