@@ -17,11 +17,13 @@ params.loadCpus = 1
 def fromCSVToMetas = { path -> 
   file(path).text.split("\\r?\\n").collect { 
     def vals = it.split(",")
-    return [ "vcf": vals[0], "ref": vals[1], "refDB": vals[2] ]
+    splitted = vals[0].split('.')
+    vcfFileId = splitted.take(splitted.length-2).join('.') // remove .vcf.gz
+    return [ "vcf": vcfFileId, "ref": vals[1], "refDB": vals[2] ]
   }
 }
 
-def resolveFile = { meta -> tuple(meta, file("${params.vcfs}/${meta.vcf}"), file("${params.refs}/${meta.ref}")) }
+def resolveFile = { meta -> tuple(meta, file("${params.vcfs}/${meta.vcf}.vcf.gz"), file("${params.refs}/${meta.ref}")) }
 
 vcfMetas = Channel.from(*fromCSVToMetas(params.mapping)).map(resolveFile)
 
