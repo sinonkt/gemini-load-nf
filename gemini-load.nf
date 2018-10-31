@@ -35,7 +35,6 @@ process decomposeNormalizeAnnotate {
 
     output:
     set meta, "annotated.vcf.gz" into annotatedVCFs
-    set "snpEff_summary.html" into snpEffLogs
 
     shell:
     '''
