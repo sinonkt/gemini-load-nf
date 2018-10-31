@@ -9,7 +9,7 @@ params.refs = "${params.rootDir}/data/references"
 params.dbs = "${params.rootDir}/data/dbs"
 params.annos = "${params.rootDir}/data/annos"
 
-params.annotateMemory = '4.2 GB'
+params.annotateMemoryGB = 4
 params.annotateCpus = 1
 params.loadCpus = 1
 // ******************** End Params *********************
@@ -28,7 +28,7 @@ vcfMetas = Channel.from(*fromCSVToMetas(params.mapping)).map(resolveFile)
 
 process decomposeNormalizeAnnotate {
 
-    memory params.annotateMemory
+    memory params.annotateMemoryGB
 
     input:
     set meta, 'file.vcf.gz', 'ref.fasta' from vcfMetas
@@ -43,7 +43,7 @@ process decomposeNormalizeAnnotate {
         sed 's/ID=AD,Number=./ID=AD,Number=R/' | 
         vt decompose -s - |
         vt normalize -r ref.fasta - |
-        java -Xmx4G -jar $SNPEFF_JAR -t !{meta.refDB} |
+        java -Xmx!{params.annotateMemoryGB}G -jar $SNPEFF_JAR -t !{meta.refDB} |
         bgzip --threads !{params.annotateCpus} -c > annotated.vcf.gz
     tabix -p vcf annotated.vcf.gz
     '''
