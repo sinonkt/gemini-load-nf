@@ -10,6 +10,7 @@ params.dbs = "${params.rootDir}/data/dbs"
 params.annos = "${params.rootDir}/data/annos"
 
 params.annotateMemory = '4.2 GB'
+params.annotateCpus = 1
 params.loadCpus = 1
 // ******************** End Params *********************
 
@@ -21,33 +22,16 @@ def fromCSVToMetas = { path ->
     return [ "vcf": vals[0], "ref": vals[1], "refDB": vals[2] ]
   }
 }
-def resolveFile = { meta -> tuple(meta, file("${params.vcfs}/${meta.vcf}.vcf"), file("${params.refs}/${meta.ref}")) }
+def resolveFile = { meta -> tuple(meta, file("${params.vcfs}/${meta.vcf}.vcf.gz"), file("${params.refs}/${meta.ref}")) }
 
 vcfMetas = Channel.from(*fromCSVToMetas(params.mapping)).map(resolveFile)
 
-process decomposeNormalize {
-
-    input:
-    set meta, 'file.vcf', 'ref.fasta' from vcfMetas
-
-    output:
-    set meta, "decomposed.normalized.vcf" into decompoedNormalizedVCFs
-
-    shell: 
-    '''
-    zless file.vcf |
-        sed 's/ID=AD,Number=./ID=AD,Number=R/' | 
-        vt decompose -s - |
-        vt normalize -r ref.fasta - > decomposed.normalized.vcf
-    '''
-}
-
-process annotation {
+process decomposeNormalizeAnnotate {
 
     memory params.annotateMemory
 
     input:
-    set meta, "decomposed.normalized.vcf" from decompoedNormalizedVCFs
+    set meta, 'file.vcf.gz', 'ref.fasta' from vcfMetas
 
     output:
     set meta, "annotated.vcf.gz" into annotatedVCFs
@@ -55,7 +39,12 @@ process annotation {
 
     shell:
     '''
-    java -Xmx4G -jar $SNPEFF_JAR -v !{meta.refDB} decomposed.normalized.vcf | bgzip -c > annotated.vcf.gz
+    zless file.vcf |
+        sed 's/ID=AD,Number=./ID=AD,Number=R/' | 
+        vt decompose -s - |
+        vt normalize -r ref.fasta - |
+        java -Xmx4G -jar $SNPEFF_JAR -t !{meta.refDB} |
+        bgzip --threads !{params.annotateCpus} -c > annotated.vcf.gz
     tabix -p vcf annotated.vcf.gz
     '''
 }
