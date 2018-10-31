@@ -36,7 +36,6 @@ process decomposeNormalizeAnnotate {
 
     output:
     set meta, "annotated.vcf.gz" into annotatedVCFs
-    set "snpEff_genes.txt", "snpEff_summary.html" into snpEffLogs
 
     shell:
     '''
@@ -44,7 +43,7 @@ process decomposeNormalizeAnnotate {
         sed 's/ID=AD,Number=./ID=AD,Number=R/' | 
         vt decompose -s - |
         vt normalize -r ref.fasta - |
-        java -Xmx!{params.annotateMemoryGB}G -jar $SNPEFF_JAR !{meta.refDB} -t - |
+        java -Xmx!{params.annotateMemoryGB}G -jar $SNPEFF_JAR anno -t !{meta.refDB} |
         bgzip --threads !{params.annotateCpus} -c > annotated.vcf.gz
     tabix -p vcf annotated.vcf.gz
     '''
