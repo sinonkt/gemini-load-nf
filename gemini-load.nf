@@ -39,7 +39,7 @@ process decomposeNormalizeAnnotate {
 
     shell:
     '''
-    zless file.vcf |
+    zless file.vcf.gz |
         sed 's/ID=AD,Number=./ID=AD,Number=R/' | 
         vt decompose -s - |
         vt normalize -r ref.fasta - |
