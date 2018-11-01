@@ -2,6 +2,7 @@
 
 // ******************** Start Params *********************
 params.rootDir = "/home/dev/Code"
+params.tempDir = "${params.rootDir}/temp"
 params.mapping = "${params.rootDir}/data/mapping.csv"
 params.vcfs = "${params.rootDir}/data/vcfs"
 params.refs = "${params.rootDir}/data/references"
@@ -19,7 +20,7 @@ def fromCSVToMetas = { path ->
     def vals = it.split(",")
     splitted = vals[0].tokenize('.')
     vcfFileId = splitted.take(splitted.size()-2).join(".") // remove .vcf.gz
-    return [ "vcf": vcfFileId, "ref": vals[1], "refDB": vals[2] ]
+    return [ "vcf": vcfFileId, "ref": vals[1], "refDB": vals[2], "ped": vals.length == 4 ? vals[3]: null ]
   }
 }
 
@@ -56,15 +57,23 @@ process geminiLoad {
     containerOptions = "-B ${params.annos}:/gemini_data"
 
     input: 
-    set meta, "annotated.vcf.gz" from annotatedVCFs
+    set meta, "annotated.vcf.gz", "annotated.vcf.gz.tbi" from annotatedVCFs
 
     output: 
     set meta, "${meta.vcf}.db" into dbs
 
     shell:
-    '''
-    gemini load --cores !{params.loadCpus} -t snpEff -v annotated.vcf.gz !{meta.vcf}.db
-    '''
+    if(meta.ped == null)
+        '''
+        gemini load --cores !{params.loadCpus} --tempdir !{params.tempDir} -t snpEff -v annotated.vcf.gz \
+            !{meta.vcf}.db
+        '''
+    else
+        '''
+        gemini load --cores !{params.loadCpus} --tempdir !{params.tempDir} -t snpEff -v annotated.vcf.gz \
+            -p !{meta.pedFile} \
+            !{meta.vcf}.db
+        '''
 }
     
 dbs.subscribe {
