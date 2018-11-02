@@ -44,12 +44,12 @@ process decomposeNormalizeAnnotate {
 
     shell:
     '''
-    bgzip --decompress --threads !{params.annotateCpus} -c file.vcf.gz |
+    zless file.vcf.gz |
         sed 's/ID=AD,Number=./ID=AD,Number=R/' | 
         vt decompose -s - |
         vt normalize -r ref.fasta - |
         java -Xmx!{params.annotateMemoryGB}G -jar $SNPEFF_JAR -t !{meta.refDB} |
-        bgzip --threads !{params.annotateCpus} -c > annotated.vcf.gz
+        bgzip -c > annotated.vcf.gz
     tabix -p vcf annotated.vcf.gz
     '''
 }
