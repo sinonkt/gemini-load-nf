@@ -24,7 +24,11 @@ def fromCSVToMetas = { path ->
   }
 }
 
-def resolveFile = { meta -> tuple(meta, file("${params.vcfs}/${meta.vcf}.vcf.gz"), file("${params.refs}/${meta.ref}")) }
+def resolveFile = { meta -> tuple(meta, 
+    file("${params.vcfs}/${meta.vcf}.vcf.gz"),
+    file("${params.refs}/${meta.ref}"),
+    file("${params.refs}/${meta.ped}"))
+}
 
 vcfMetas = Channel.from(*fromCSVToMetas(params.mapping)).map(resolveFile)
 
@@ -36,7 +40,7 @@ process decomposeNormalizeAnnotate {
     set meta, 'file.vcf.gz', 'ref.fasta' from vcfMetas
 
     output:
-    set meta, "annotated.vcf.gz" into annotatedVCFs
+    set meta, "annotated.vcf.gz", "annotated.vcf.gz.tbi" into annotatedVCFs
 
     shell:
     '''
