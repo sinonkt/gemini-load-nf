@@ -20,7 +20,12 @@ def fromCSVToMetas = { path ->
     def vals = it.split(",")
     splitted = vals[0].tokenize('.')
     vcfFileId = splitted.take(splitted.size()-2).join(".") // remove .vcf.gz
-    return [ "vcf": vcfFileId, "ref": vals[1], "refDB": vals[2], "ped": vals.length == 4 ? vals[3]: null ]
+    return [ 
+     "vcf": vcfFileId,
+     "ref": vals[1],
+     "refDB": vals[2],
+     "ped": vals.length == 4 ? file("${params.refs}/${vals[3]}"): null 
+    ]
   }
 }
 
@@ -72,10 +77,9 @@ process geminiLoad {
             !{meta.vcf}.db
         '''
     else
-        pedFile = file("${params.refs}/${meta.ped}")
         '''
         gemini load --cores !{params.loadCpus} --tempdir !{params.tempDir} -t snpEff -v annotated.vcf.gz \
-            -p !{pedFile} \
+            -p !{meta.ped} \
             !{meta.vcf}.db
         '''
 }
