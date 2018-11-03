@@ -26,8 +26,7 @@ def fromCSVToMetas = { path ->
 
 def resolveFile = { meta -> tuple(meta, 
     file("${params.vcfs}/${meta.vcf}.vcf.gz"),
-    file("${params.refs}/${meta.ref}"),
-    file("${params.refs}/${meta.ped}"))
+    file("${params.refs}/${meta.ref}"))
 }
 
 vcfMetas = Channel.from(*fromCSVToMetas(params.mapping)).map(resolveFile)
@@ -73,9 +72,10 @@ process geminiLoad {
             !{meta.vcf}.db
         '''
     else
+        pedFile = file("${params.refs}/${meta.ped}")
         '''
         gemini load --cores !{params.loadCpus} --tempdir !{params.tempDir} -t snpEff -v annotated.vcf.gz \
-            -p !{meta.pedFile} \
+            -p !{pedFile} \
             !{meta.vcf}.db
         '''
 }
