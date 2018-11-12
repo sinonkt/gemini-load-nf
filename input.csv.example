@@ -1,0 +1,2 @@
+project,inputType,refBuild,ref,inputDir
+joint,vcf,GRCh37.75,/colossus/home/krittin/gemini-playground/data/references/ref.fasta,/colossus/home/krittin/gemini-playground/data/vcfs

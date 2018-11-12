@@ -1,5 +1,8 @@
 #!/usr/bin/env nextflow
+// ******************** Start Params *********************
+// params.inputType = 'vcf' // vcf, vcf.gz, bed_bim_fam, (every format has chromosome awareness)
 
+// ******************** End Params *********************
 // ******************** Start Params *********************
 params.rootDir = "/home/dev/Code"
 params.tempDir = "${params.rootDir}/temp"
@@ -52,7 +55,7 @@ process decomposeNormalizeAnnotate {
         sed 's/ID=AD,Number=./ID=AD,Number=R/' | 
         vt decompose -s - |
         vt normalize -r ref.fasta - |
-        java -Xmx!{params.annotateMemoryGB}G -jar $SNPEFF_JAR !{meta.refDB} |
+        java -Xmx!{params.annotateMemoryGB}G -jar $SNPEFF_JAR -t !{meta.refDB} |
         bgzip --threads !{params.annotateCpus} -c > annotated.vcf.gz
     tabix -p vcf annotated.vcf.gz
     '''
