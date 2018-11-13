@@ -1,0 +1,24 @@
+#!/usr/bin/env /bin/bash
+ROOT_DIR=$1
+PROFILE=colossus
+datetime=$(date -d "today" +"%Y%m%d")
+time=$(date -d "today" +"%H%M")
+NX_CONFIG=${ROOT_DIR}/nextflow.config
+LOG_DIR=${ROOT_DIR}/logs/${datetime}
+WORK_DIR=${ROOT_DIR}/works
+PUBLISH_DIR=${ROOT_DIR}/publish
+INPUT_CSV=${ROOT_DIR}/input.csv
+
+mkdir -p $LOG_DIR $WORK_DIR $PUBLISH_DIR
+
+nextflow -log $LOG_DIR/.nextflow.${time}.log \
+  -C $NX_CONFIG \
+  run ${ROOT_DIR}/main.nf \
+  -w $WORK_DIR \
+  -profile $PROFILE \
+  -resume \
+  -with-report ${LOG_DIR}/report_${data}_${time}.html \
+  -with-timeline ${LOG_DIR}/timeline_${data}_${time}.html \
+  --inputCSV $INPUT_CSV \
+  --publishDir $PUBLISH_DIR \
+  "${@:2}"

@@ -1,4 +1,4 @@
-PROFILE=local
+PROFILE=colossus
 ROOT_DIR=/home/dev/Code
 datetime=$(date -d "today" +"%Y%m%d%H%M")
 NX_CONFIG=nextflow.config
