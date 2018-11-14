@@ -175,7 +175,6 @@ process decomposeNormalizeAnnotate {
     '''
 }
 
-
 process geminiLoad {
 
     tag { "${chunk.project}_${chunk.chrIdx}" }
@@ -198,7 +197,9 @@ process geminiLoad {
 }
     
 DBChunks.subscribe {
-    println "${it.project}_${it.chrIdx}"
+    chunk=it[0]
+    db=it[1]
+    println "${chunk.project}_${chunk.chrIdx}"
 }
 
 // assumption each project can have multiple fileSet. but what's about ped file
