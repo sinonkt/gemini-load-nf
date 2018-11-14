@@ -1,5 +1,5 @@
 project,refBuild,ref,projectDir,ped
 g1k,GRCh37.75,/colossus/home/krittin/data/refs/human_g1k_v37.fasta,/colossus/home/krittin/data/g1k,/colossus/home/krittin/data/g1k/g1k_v2_20130502.ped
-nogz,GRCh37.75,/colossus/home/krittin/gemini-playground/data/refs/ref.fasta,/colossus/home/krittin/data/nogz,null
-test,GRCh37.75,/colossus/home/krittin/gemini-playground/data/refs/ref.fasta,/colossus/home/krittin/data/test,null
+nogz,GRCh37.75,/colossus/home/krittin/data/refs/ref.fasta,/colossus/home/krittin/data/nogz,null
+test,GRCh37.75,/colossus/home/krittin/data/refs/ref.fasta,/colossus/home/krittin/data/test,null
 hapmap3r2,GRCh37.75,/colossus/home/krittin/data/refs/human_g1k_v37.fasta,/colossus/home/krittin/data/hapmap3r2,null

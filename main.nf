@@ -80,14 +80,14 @@ process VCFgz {
   shell:
   '''
   plink --bfile !{dataset.fileSetId} --recode vcf --out !{dataset.fileSetId}
-  bgzip -c !{dataset.fileSetId}.vcf > !{dataset.fileSetId}.vcf.gz
+  bgzip --threads 8 -c !{dataset.fileSetId}.vcf > !{dataset.fileSetId}.vcf.gz
   '''
 }
 
 process Bgzip {
 
   tag { dataset.project }
-  
+
   input:
   set dataset, "${dataset.fileSetId}.vcf" from Vcf.map(attachVcfFile)
 
@@ -96,7 +96,7 @@ process Bgzip {
 
   shell:
   '''
-  bgzip -c !{dataset.fileSetId}.vcf > !{dataset.fileSetId}.vcf.gz
+  bgzip --threads 8 -c !{dataset.fileSetId}.vcf > !{dataset.fileSetId}.vcf.gz
   '''
 }
 
@@ -108,13 +108,9 @@ mixedVcfgz = Vcfgz.mix(
 SplittedVcfgz = Channel.create()
 NonSplittedVcfgz = Channel.create()
 
-out = mixedVcfgz
+mixedVcfgz
   .map(checkChromosomeSplittedThenAttachVcfgzFile)
   .choice(SplittedVcfgz, NonSplittedVcfgz) { it.splittedChannelIdx }
-
-// out.subscribe {
-//   println ([it.project, it.splittedChannelIdx, it.isSplitted])
-// }
 
 process splitChromosome {
 
@@ -131,34 +127,79 @@ process splitChromosome {
   tabix -p vcf !{dataset.fileSetId}.vcf.gz
   for chrIdx in !{dataset.chromosomes.join(\' \')}
   do
-    tabix !{dataset.fileSetId}.vcf.gz $chrIdx > !{dataset.fileSetId}.chr$chrIdx.vcf
-    if [ -s !{dataset.fileSetId}.chr$chrIdx.vcf ]; then
-      bgzip -c !{dataset.fileSetId}.chr$chrIdx.vcf > !{dataset.fileSetId}.chr$chrIdx.vcf.gz
+    tabix -h !{dataset.fileSetId}.vcf.gz $chrIdx > !{dataset.fileSetId}.chr$chrIdx.vcf
+    numRows=$(gawk '/^[^#]/ {print $0}' !{dataset.fileSetId}.chr$chrIdx.vcf | wc -l)
+    if [ $numRows -ne 0 ]; then
+      bgzip --threads 8 -c !{dataset.fileSetId}.chr$chrIdx.vcf > !{dataset.fileSetId}.chr$chrIdx.vcf.gz
     fi
   done
   '''
 }
 
-// SplittedVcfgzFromNonSplitted.subscribe {
-//   println ([it[0].project, it[1]])
-// }
+def flattenDatasetAsVCFgzChunks = {
+    def out = []
+    it.splittedVcfgzs.each { vcfgz ->
+      def vcfgzId = vcfgz.name.replaceAll(/.vcf.gz$/,'')
+      def chrIdx = (vcfgzId =~ CHECK_CHROMOSOME_PATTERN)[0][1]
+      out.push([ *:it, vcfgzId: vcfgzId, chrIdx: chrIdx, vcfgzPath: vcfgz ])
+    }
+    out
+}
 
-// println (SplittedVcfgzFromNonSplitted.count())
-// println (SplittedVcfgz.count())
-// SplittedVcfgz.subscribe {
-//   println (it.project)
-// }
-
-SplittedVcfgz.mix(
-  SplittedVcfgzFromNonSplitted.map { it[0].splittedVcfgzs = it[1]; it[0] }
+SplittedVcfgz.map({ it.splittedVcfgzs = it.allVcfgzFiles; it }).mix(
+  SplittedVcfgzFromNonSplitted.map { it[0].splittedVcfgzs = it.tail().flatten(); it[0] }
 )
-  .subscribe {
-    println "**********************************"
-    println it
-    println "**********************************"
-  }
-// process splitChromosome {
-// }
+  .flatMap(flattenDatasetAsVCFgzChunks)
+  .map({ tuple(it, file(it.vcfgzPath), file(it.ref)) })
+  .set { DatasetChunks }
+
+process decomposeNormalizeAnnotate {
+
+    tag { "${chunk.project}_${chunk.chrIdx}" }
+
+    input:
+    set chunk, "file.vcf.gz", "ref.fasta" from DatasetChunks
+
+    output:
+    set chunk, "annotated.vcf.gz", "annotated.vcf.gz.tbi" into AnnotatedVCFChunks
+
+    shell:
+    '''
+    bgzip --decompress --threads 8 -c file.vcf.gz |
+        sed 's/ID=AD,Number=./ID=AD,Number=R/' | 
+        vt decompose -s - |
+        vt normalize -r ref.fasta - |
+        java -Xmx8G -jar $SNPEFF_JAR -t !{chunk.refBuild} |
+        bgzip --threads 8 -c > annotated.vcf.gz
+    tabix -p vcf annotated.vcf.gz
+    '''
+}
+
+
+process geminiLoad {
+
+    tag { "${chunk.project}_${chunk.chrIdx}" }
+
+    input: 
+    set chunk, "annotated.vcf.gz", "annotated.vcf.gz.tbi" from AnnotatedVCFChunks
+
+    output: 
+    set chunk, "${chunk.vcfgzId}.db" into DBChunks
+
+    shell:
+    if(chunk.ped == null)
+        '''
+        gemini load --cores 32 --tempdir ./tmp -t snpEff -v annotated.vcf.gz !{chunk.vcfgzId}.db
+        '''
+    else
+        '''
+        gemini load --cores 32 --tempdir ./temp -t snpEff -v annotated.vcf.gz -p !{chunk.ped} !{chunk.vcfgzId}.db
+        '''
+}
+    
+DBChunks.subscribe {
+    println "${it.project}_${it.chrIdx}"
+}
 
 // assumption each project can have multiple fileSet. but what's about ped file
 // may be ^-- it's not gonna work.
@@ -173,58 +214,4 @@ SplittedVcfgz.mix(
 //                              v                   v                                v
 //                       all set over a chr  | all chromosome on this set | just all 
 // merge db
-
-// process splitChromosome {
-  
-//   shell:
-//   '''
-//   tabix -p vcf myvcf.vcf.gz
-//   tabix myvcf.vcf.gz chr1 > chr1.vcf
-//   '''
-// }
-// process decomposeNormalizeAnnotate {
-
-//     input:
-//     set meta, 'file.vcf.gz', 'ref.fasta' from vcfMetas
-
-//     output:
-//     set meta, "annotated.vcf.gz", "annotated.vcf.gz.tbi" into annotatedVCFs
-
-//     shell:
-//     '''
-//     bgzip --decompress --threads !{task.cpus} -c file.vcf.gz |
-//         sed 's/ID=AD,Number=./ID=AD,Number=R/' | 
-//         vt decompose -s - |
-//         vt normalize -r ref.fasta - |
-//         java -Xmx!{task.memory}G -jar $SNPEFF_JAR -t !{meta.refDB} |
-//         bgzip --threads !{task.cpus} -c > annotated.vcf.gz
-//     tabix -p vcf annotated.vcf.gz
-//     '''
-// }
-
-// process geminiLoad {
-
-//     publishDir params.dbs, mode: 'copy'
-
-//     containerOptions = "-B ${params.annos}:/gemini_data"
-
-//     input: 
-//     set meta, "annotated.vcf.gz", "annotated.vcf.gz.tbi" from annotatedVCFs
-
-//     output: 
-//     set meta, "${meta.vcf}.db" into dbs
-
-//     shell:
-//     if(meta.ped == null)
-//         '''
-//         gemini load --cores !{task.cpus} --tempdir ./tmp -t snpEff -v annotated.vcf.gz !{meta.vcf}.db
-//         '''
-//     else
-//         '''
-//         gemini load --cores !{task.cpus} --tempdir ./temp -t snpEff -v annotated.vcf.gz -p !{meta.ped} !{meta.vcf}.db
-//         '''
-// }
-    
-// dbs.subscribe {
-//     println it
-// }
+// map && collect is the most frequenly bug happened
